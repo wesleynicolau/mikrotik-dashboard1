@@ -28,6 +28,9 @@ export default function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(5000);
 
+  // Only enable query if all credentials are provided
+  const hasValidCredentials = !!(config.host && config.user && config.password);
+
   const metricsQuery = trpc.mikrotik.getAllMetrics.useQuery(
     {
       host: config.host,
@@ -36,9 +39,10 @@ export default function Dashboard() {
       password: config.password,
     },
     {
-      enabled: isConfigured && autoRefresh,
-      refetchInterval: autoRefresh ? refreshInterval : false,
+      enabled: isConfigured && autoRefresh && hasValidCredentials,
+      refetchInterval: autoRefresh && hasValidCredentials ? refreshInterval : false,
       staleTime: 0,
+      retry: 1,
     }
   );
 
@@ -224,6 +228,7 @@ export default function Dashboard() {
             onClick={() => {
               setIsConfigured(false);
               localStorage.clear();
+              toast.success('Configuração limpa');
             }}
           >
             Desconectar
@@ -237,8 +242,19 @@ export default function Dashboard() {
           <div>
             <p className="font-semibold text-red-900">Erro de Conexão</p>
             <p className="text-sm text-red-700 mt-1">
-              {metricsQuery.error?.message || 'Não foi possível conectar ao RouterOS'}
+              {metricsQuery.error?.message || 'Não foi possível conectar ao RouterOS. Verifique as credenciais e tente novamente.'}
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setIsConfigured(false);
+                toast.info('Configure novamente suas credenciais');
+              }}
+            >
+              Reconfigurar
+            </Button>
           </div>
         </div>
       )}
@@ -302,16 +318,24 @@ export default function Dashboard() {
 
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Interfaces de Rede</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {interfaces.map(iface => (
-                <InterfaceChart
-                  key={iface.name}
-                  title={`${iface.name} ${iface.running ? '(Ativo)' : '(Inativo)'}`}
-                  data={chartData[iface.name] || []}
-                  isLoading={metricsQuery.isLoading}
-                />
-              ))}
-            </div>
+            {interfaces.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground text-center">Nenhuma interface encontrada</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {interfaces.map(iface => (
+                  <InterfaceChart
+                    key={iface.name}
+                    title={`${iface.name} ${iface.running ? '(Ativo)' : '(Inativo)'}`}
+                    data={chartData[iface.name] || []}
+                    isLoading={metricsQuery.isLoading}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <Card>

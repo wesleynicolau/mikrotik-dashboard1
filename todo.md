@@ -36,3 +36,6 @@
 ## Correções e Melhorias
 - [x] Corrigir roteamento 404 em /dashboard (problema com nested routes)
 - [x] Validar testes após correção
+- [x] Corrigir erro de query de métricas quando credenciais não estão configuradas
+- [x] Adicionar tela de configuração inicial com validação de credenciais
+- [x] Melhorar tratamento de erros com feedback visual ao usuário
