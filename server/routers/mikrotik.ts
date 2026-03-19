@@ -17,6 +17,7 @@ export const mikrotikRouter = router({
         port: z.number().int().min(1).max(65535).default(8728),
         user: z.string().min(1),
         password: z.string(),
+        timeout: z.number().int().min(1000).max(120000).default(30000), // 1s to 2min
       })
     )
     .mutation(async ({ input }) => {
@@ -28,6 +29,7 @@ export const mikrotikRouter = router({
           port: input.port,
           user: input.user,
           password: input.password,
+          timeout: input.timeout,
         });
 
         await client.connect();
@@ -62,6 +64,7 @@ export const mikrotikRouter = router({
         port: z.number().int().min(1).max(65535).default(8728),
         user: z.string().min(1),
         password: z.string(),
+        timeout: z.number().int().min(1000).max(120000).default(30000),
       })
     )
     .query(async ({ input }): Promise<SystemInfo> => {
@@ -71,6 +74,7 @@ export const mikrotikRouter = router({
           port: input.port,
           user: input.user,
           password: input.password,
+          timeout: input.timeout,
         });
 
         await client.connect();
@@ -88,15 +92,16 @@ export const mikrotikRouter = router({
     }),
 
   /**
-   * Get interface metrics from a MikroTik device
+   * Get interfaces from a MikroTik device
    */
-  getInterfaceMetrics: protectedProcedure
+  getInterfaces: protectedProcedure
     .input(
       z.object({
         host: z.string().min(1),
         port: z.number().int().min(1).max(65535).default(8728),
         user: z.string().min(1),
         password: z.string(),
+        timeout: z.number().int().min(1000).max(120000).default(30000),
       })
     )
     .query(async ({ input }): Promise<InterfaceInfo[]> => {
@@ -106,6 +111,7 @@ export const mikrotikRouter = router({
           port: input.port,
           user: input.user,
           password: input.password,
+          timeout: input.timeout,
         });
 
         await client.connect();
@@ -123,7 +129,7 @@ export const mikrotikRouter = router({
     }),
 
   /**
-   * Get all metrics (system + interfaces) from a MikroTik device
+   * Get all metrics from a MikroTik device
    */
   getAllMetrics: protectedProcedure
     .input(
@@ -132,6 +138,7 @@ export const mikrotikRouter = router({
         port: z.number().int().min(1).max(65535).default(8728),
         user: z.string().min(1),
         password: z.string(),
+        timeout: z.number().int().min(1000).max(120000).default(30000),
       })
     )
     .query(

@@ -53,3 +53,8 @@
 - [x] Implementar timeout automático para desconectar sessões inativas
 - [x] Adicionar método para fechar todas as conexões ao desligar o servidor
 - [ ] Testar com limite de sessões do RouterOS
+
+## Otimizações de Rede
+- [x] Aumentar timeout de conexão de 10s para 30s (padrão)
+- [x] Adicionar timeout configurável na interface de Settings
+- [x] Validar testes após mudanças

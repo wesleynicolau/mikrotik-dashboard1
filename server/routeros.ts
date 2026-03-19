@@ -5,6 +5,7 @@ export interface RouterOSConfig {
   port: number;
   user: string;
   password: string;
+  timeout?: number; // Connection timeout in milliseconds (default: 30000)
 }
 
 export interface SystemInfo {
@@ -190,12 +191,15 @@ async function getPooledConnection(config: RouterOSConfig): Promise<RouterOSAPI>
 
   // Create new connection
   console.log('[RouterOS Pool] Creating new connection:', key);
+  const timeout = config.timeout || 30000; // Default 30 seconds
   const api = new RouterOSAPI({
     host: config.host,
     port: config.port,
     user: config.user,
     password: config.password,
+    timeout: timeout,
   });
+  console.log('[RouterOS Pool] Connection timeout set to:', timeout, 'ms');
 
   try {
     await api.connect();

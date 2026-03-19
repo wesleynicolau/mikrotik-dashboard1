@@ -144,7 +144,7 @@ describe('mikrotikRouter', () => {
         res: {} as any,
       });
 
-      const result = await caller.getInterfaceMetrics({
+      const result = await caller.getInterfaces({
         host: '192.168.88.1',
         port: 8728,
         user: 'admin',

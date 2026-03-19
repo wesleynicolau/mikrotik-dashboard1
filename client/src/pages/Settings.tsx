@@ -13,6 +13,7 @@ export default function Settings() {
     port: 8728,
     user: 'admin',
     password: '',
+    timeout: 30000, // 30 seconds
   });
 
   const [testResult, setTestResult] = useState<{
@@ -47,7 +48,7 @@ export default function Settings() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'port' ? parseInt(value, 10) : value,
+      [name]: name === 'port' || name === 'timeout' ? parseInt(value, 10) : value,
     }));
   };
 
@@ -62,6 +63,7 @@ export default function Settings() {
       port: formData.port,
       user: formData.user,
       password: formData.password,
+      timeout: formData.timeout,
     });
   };
 
@@ -132,6 +134,24 @@ export default function Settings() {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="timeout">Timeout (ms) - Padrão: 30000</Label>
+            <Input
+              id="timeout"
+              name="timeout"
+              type="number"
+              placeholder="30000"
+              value={formData.timeout}
+              onChange={handleInputChange}
+              disabled={testConnectionMutation.isPending}
+              min="1000"
+              max="120000"
+            />
+            <p className="text-xs text-muted-foreground">
+              Tempo máximo de espera para conexão (1000-120000 ms). Aumente se o RouterOS está em rede remota.
+            </p>
+          </div>
+
           <Button
             onClick={handleTestConnection}
             disabled={testConnectionMutation.isPending}
@@ -149,56 +169,35 @@ export default function Settings() {
 
           {testResult && (
             <div
-              className={`p-4 rounded-lg border flex items-start gap-3 ${
+              className={`p-4 rounded-lg border-l-4 ${
                 testResult.success
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
+                  ? 'bg-green-50 border-green-500'
+                  : 'bg-red-50 border-red-500'
               }`}
             >
-              {testResult.success ? (
-                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              )}
-              <div>
-                <p
-                  className={`font-semibold ${
-                    testResult.success ? 'text-green-900' : 'text-red-900'
-                  }`}
-                >
-                  {testResult.message}
-                </p>
-                {testResult.success && testResult.model && (
-                  <p className="text-sm text-green-700 mt-1">
-                    Modelo: {testResult.model} | Versão: {testResult.version}
-                  </p>
+              <div className="flex items-start gap-3">
+                {testResult.success ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                 )}
+                <div className="flex-1">
+                  <p className={`font-semibold ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                    {testResult.success ? 'Sucesso' : 'Erro'}
+                  </p>
+                  <p className={`text-sm mt-1 ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                    {testResult.message}
+                  </p>
+                  {testResult.model && (
+                    <div className="mt-3 space-y-1 text-sm">
+                      <p><strong>Modelo:</strong> {testResult.model}</p>
+                      <p><strong>Versão:</strong> {testResult.version}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações de Conexão</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div>
-            <p className="font-semibold mb-2">Portas padrão do RouterOS:</p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>API (não segura): 8728</li>
-              <li>API (segura/SSL): 8729</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-semibold mb-2">Requisitos:</p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>RouterOS 6.0 ou superior</li>
-              <li>API habilitada no RouterOS</li>
-              <li>Usuário com permissões de leitura</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
     </div>
