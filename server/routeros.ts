@@ -191,7 +191,7 @@ async function getPooledConnection(config: RouterOSConfig): Promise<RouterOSAPI>
 
   // Create new connection
   console.log('[RouterOS Pool] Creating new connection:', key);
-  const timeout = config.timeout || 30000; // Default 30 seconds
+  const timeout = config.timeout || 5000; // Default 5 seconds
   const api = new RouterOSAPI({
     host: config.host,
     port: config.port,

@@ -13,7 +13,7 @@ export default function Settings() {
     port: 8728,
     user: 'admin',
     password: '',
-    timeout: 30000, // 30 seconds
+    timeout: 5000, // 5 seconds
   });
 
   const [testResult, setTestResult] = useState<{
@@ -140,7 +140,7 @@ export default function Settings() {
               id="timeout"
               name="timeout"
               type="number"
-              placeholder="30000"
+                placeholder="5000"
               value={formData.timeout}
               onChange={handleInputChange}
               disabled={testConnectionMutation.isPending}
@@ -148,7 +148,7 @@ export default function Settings() {
               max="120000"
             />
             <p className="text-xs text-muted-foreground">
-              Tempo máximo de espera para conexão (1000-120000 ms). Aumente se o RouterOS está em rede remota.
+              Tempo máximo de espera para conexão em ms (padrão: 5000). Aumente se o RouterOS está em rede remota/WAN.
             </p>
           </div>
 

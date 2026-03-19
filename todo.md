@@ -58,3 +58,6 @@
 - [x] Aumentar timeout de conexão de 10s para 30s (padrão)
 - [x] Adicionar timeout configurável na interface de Settings
 - [x] Validar testes após mudanças
+
+## Ajustes de UX
+- [x] Reduzir timeout padrão de 30s para 5s (mais ágil e responsivo)

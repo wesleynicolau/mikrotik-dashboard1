@@ -17,7 +17,7 @@ export const mikrotikRouter = router({
         port: z.number().int().min(1).max(65535).default(8728),
         user: z.string().min(1),
         password: z.string(),
-        timeout: z.number().int().min(1000).max(120000).default(30000), // 1s to 2min
+        timeout: z.number().int().min(1000).max(120000).default(5000), // 1s to 2min
       })
     )
     .mutation(async ({ input }) => {
