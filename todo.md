@@ -25,9 +25,14 @@
 - [x] Implementar polling automático de dados
 - [x] Implementar feedback visual de status de conexão
 - [x] Implementar tratamento de erros na UI
+- [x] Corrigir roteamento para /dashboard e /settings
 
 ## Integração & Validação
 - [x] Testar conexão com RouterOS real
 - [x] Validar atualização em tempo real dos dados
 - [x] Testar responsividade em dispositivos móveis
 - [x] Criar checkpoint final
+
+## Correções e Melhorias
+- [x] Corrigir roteamento 404 em /dashboard (problema com nested routes)
+- [x] Validar testes após correção

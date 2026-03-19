@@ -13,15 +13,17 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path="*" nest>
+      <Route path={"/dashboard"}>
         <DashboardLayout>
-          <Switch>
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/settings" component={Settings} />
-            <Route component={NotFound} />
-          </Switch>
+          <Dashboard />
         </DashboardLayout>
       </Route>
+      <Route path={"/settings"}>
+        <DashboardLayout>
+          <Settings />
+        </DashboardLayout>
+      </Route>
+      <Route component={NotFound} />
     </Switch>
   );
 }
