@@ -46,3 +46,10 @@
 - [x] Cancelar polling quando autoRefresh é desativado
 - [x] Melhorar mensagens de erro com classificação de tipo de falha
 - [x] Adicionar detecção de timeout, autenticação, firewall e outros erros
+
+## Gerenciamento de Conexões (CRÍTICO)
+- [x] Implementar reutilização de conexão única (não abrir nova a cada query)
+- [x] Adicionar pool de conexões com limite configurável
+- [x] Implementar timeout automático para desconectar sessões inativas
+- [x] Adicionar método para fechar todas as conexões ao desligar o servidor
+- [ ] Testar com limite de sessões do RouterOS

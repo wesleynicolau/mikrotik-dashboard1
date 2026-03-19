@@ -129,56 +129,152 @@ function classifyConnectionError(error: unknown): string {
 }
 
 /**
- * Create a RouterOS client instance
+ * Global connection pool to reuse RouterOS connections
+ * Prevents exhausting RouterOS session limits
+ */
+interface PooledConnection {
+  api: RouterOSAPI;
+  config: RouterOSConfig;
+  lastUsed: number;
+  inUse: boolean;
+}
+
+const connectionPool = new Map<string, PooledConnection>();
+const MAX_IDLE_TIME = 5 * 60 * 1000; // 5 minutes
+const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
+
+/**
+ * Generate a unique key for a connection config
+ */
+function getConnectionKey(config: RouterOSConfig): string {
+  return `${config.host}:${config.port}:${config.user}`;
+}
+
+/**
+ * Cleanup idle connections periodically
+ */
+function startCleanupTimer() {
+  setInterval(() => {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+
+    connectionPool.forEach((conn, key) => {
+      if (!conn.inUse && now - conn.lastUsed > MAX_IDLE_TIME) {
+        console.log('[RouterOS Pool] Closing idle connection:', key);
+        conn.api.close().catch((err) => console.error('[RouterOS Pool] Error closing idle connection:', err));
+        keysToDelete.push(key);
+      }
+    });
+
+    keysToDelete.forEach((key) => connectionPool.delete(key));
+  }, CLEANUP_INTERVAL);
+}
+
+// Start cleanup timer on module load
+startCleanupTimer();
+
+/**
+ * Get or create a pooled connection
+ */
+async function getPooledConnection(config: RouterOSConfig): Promise<RouterOSAPI> {
+  const key = getConnectionKey(config);
+  let pooledConn = connectionPool.get(key);
+
+  // If connection exists and is still valid, reuse it
+  if (pooledConn && !pooledConn.inUse) {
+    console.log('[RouterOS Pool] Reusing existing connection:', key);
+    pooledConn.inUse = true;
+    pooledConn.lastUsed = Date.now();
+    return pooledConn.api;
+  }
+
+  // Create new connection
+  console.log('[RouterOS Pool] Creating new connection:', key);
+  const api = new RouterOSAPI({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+  });
+
+  try {
+    await api.connect();
+    console.log('[RouterOS Pool] Connected successfully:', key);
+
+    pooledConn = {
+      api,
+      config,
+      lastUsed: Date.now(),
+      inUse: true,
+    };
+
+    connectionPool.set(key, pooledConn);
+    return api;
+  } catch (error) {
+    const classifiedError = classifyConnectionError(error);
+    console.error('[RouterOS Pool] Connection failed:', classifiedError);
+    throw new Error(classifiedError);
+  }
+}
+
+/**
+ * Release a pooled connection back to the pool
+ */
+function releasePooledConnection(config: RouterOSConfig) {
+  const key = getConnectionKey(config);
+  const pooledConn = connectionPool.get(key);
+
+  if (pooledConn) {
+    pooledConn.inUse = false;
+    pooledConn.lastUsed = Date.now();
+    console.log('[RouterOS Pool] Released connection:', key);
+  }
+}
+
+/**
+ * Create a RouterOS client instance with connection pooling
  * Handles connection and data retrieval from RouterOS devices
  */
 export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
-  let api: RouterOSAPI | null = null;
+  let currentApi: RouterOSAPI | null = null;
   let isConnectedFlag = false;
 
   const connect = async (): Promise<void> => {
     try {
       console.log('[RouterOS] Attempting to connect to', config.host, 'on port', config.port);
-      api = new RouterOSAPI({
-        host: config.host,
-        port: config.port,
-        user: config.user,
-        password: config.password,
-      });
-
-      await api.connect();
+      currentApi = await getPooledConnection(config);
       isConnectedFlag = true;
       console.log('[RouterOS] Connected successfully to', config.host);
     } catch (error) {
       isConnectedFlag = false;
-      const classifiedError = classifyConnectionError(error);
+      const classifiedError = error instanceof Error ? error.message : String(error);
       console.error('[RouterOS] Connection failed:', classifiedError);
       throw new Error(classifiedError);
     }
   };
 
   const disconnect = async (): Promise<void> => {
-    if (api) {
+    if (currentApi) {
       try {
-        await api.close();
+        releasePooledConnection(config);
         isConnectedFlag = false;
-        api = null;
-        console.log('[RouterOS] Disconnected');
+        currentApi = null;
+        console.log('[RouterOS] Connection released back to pool');
       } catch (error) {
-        console.error('[RouterOS] Error disconnecting:', error);
+        console.error('[RouterOS] Error releasing connection:', error);
       }
     }
   };
 
   const getSystemInfo = async (): Promise<SystemInfo> => {
-    if (!api || !isConnectedFlag) {
+    if (!currentApi || !isConnectedFlag) {
       throw new Error('RouterOS client not connected');
     }
 
     try {
       // Get resource info (CPU, memory)
-      const resourceData = await api.write('/system/resource/print');
-      
+      const resourceData = await currentApi.write('/system/resource/print');
+
       if (!resourceData || resourceData.length === 0) {
         throw new Error('No resource data returned from RouterOS');
       }
@@ -190,16 +286,16 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
       const uptime = resource['uptime'] || 'unknown';
 
       // Get identity info
-      const identityData = await api.write('/system/identity/print');
+      const identityData = await currentApi.write('/system/identity/print');
       const identity = identityData?.[0]?.name || 'Unknown';
 
       // Get RouterOS version
-      const packageData = await api.write('/system/package/print');
+      const packageData = await currentApi.write('/system/package/print');
       const routerosPackage = packageData?.find((pkg: any) => pkg.name === 'routeros');
       const version = routerosPackage?.version || 'Unknown';
 
       // Get board name (model)
-      const boardData = await api.write('/system/routerboard/print');
+      const boardData = await currentApi.write('/system/routerboard/print');
       const model = boardData?.[0]?.['model-name'] || boardData?.[0]?.['board-name'] || 'Unknown';
 
       return {
@@ -217,13 +313,13 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
   };
 
   const getInterfaces = async (): Promise<InterfaceInfo[]> => {
-    if (!api || !isConnectedFlag) {
+    if (!currentApi || !isConnectedFlag) {
       throw new Error('RouterOS client not connected');
     }
 
     try {
-      const interfaceData = await api.write('/interface/print');
-      
+      const interfaceData = await currentApi.write('/interface/print');
+
       if (!interfaceData) {
         return [];
       }
@@ -243,7 +339,7 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
   };
 
   const isConnected = (): boolean => {
-    return isConnectedFlag && api !== null;
+    return isConnectedFlag && currentApi !== null;
   };
 
   return {
@@ -253,4 +349,23 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
     getInterfaces,
     isConnected,
   };
+}
+
+/**
+ * Close all connections in the pool (call on server shutdown)
+ */
+export async function closeAllPooledConnections() {
+  console.log('[RouterOS Pool] Closing all pooled connections...');
+  const closePromises: Promise<any>[] = [];
+
+  connectionPool.forEach((conn, key) => {
+    console.log('[RouterOS Pool] Closing connection:', key);
+    closePromises.push(
+      conn.api.close().catch((err) => console.error('[RouterOS Pool] Error closing connection:', err))
+    );
+  });
+
+  await Promise.all(closePromises);
+  connectionPool.clear();
+  console.log('[RouterOS Pool] All connections closed');
 }
