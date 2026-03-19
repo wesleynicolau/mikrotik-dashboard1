@@ -31,6 +31,7 @@ export default function Dashboard() {
   // Only enable query if all credentials are provided
   const hasValidCredentials = !!(config.host && config.user && config.password);
 
+  const utils = trpc.useUtils();
   const metricsQuery = trpc.mikrotik.getAllMetrics.useQuery(
     {
       host: config.host,
@@ -45,6 +46,21 @@ export default function Dashboard() {
       retry: 1,
     }
   );
+
+  // Cleanup polling when component unmounts
+  useEffect(() => {
+    return () => {
+      // Disable polling when component unmounts
+      utils.mikrotik.getAllMetrics.cancel();
+    };
+  }, [utils]);
+
+  // Disable refetch when autoRefresh is turned off
+  useEffect(() => {
+    if (!autoRefresh) {
+      utils.mikrotik.getAllMetrics.cancel();
+    }
+  }, [autoRefresh, utils]);
 
   useEffect(() => {
     if (metricsQuery.data?.interfaces) {
@@ -103,8 +119,12 @@ export default function Dashboard() {
   };
 
   const handleManualRefresh = () => {
-    metricsQuery.refetch();
-    toast.success('Dados atualizados');
+    if (hasValidCredentials) {
+      metricsQuery.refetch();
+      toast.success('Dados atualizados');
+    } else {
+      toast.error('Configure as credenciais primeiro');
+    }
   };
 
   if (!isConfigured) {
@@ -227,6 +247,8 @@ export default function Dashboard() {
             size="sm"
             onClick={() => {
               setIsConfigured(false);
+              setAutoRefresh(false);
+              utils.mikrotik.getAllMetrics.cancel();
               localStorage.clear();
               toast.success('Configuração limpa');
             }}

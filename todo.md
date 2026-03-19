@@ -41,3 +41,6 @@
 - [x] Melhorar tratamento de erros com feedback visual ao usuário
 - [x] Corrigir erro de mutation em Settings (falta de import Zod)
 - [x] Adicionar logs de erro para debug
+- [x] Corrigir erro de polling em background quando navega para Settings
+- [x] Adicionar cleanup de queries quando componente desmonta
+- [x] Cancelar polling quando autoRefresh é desativado
