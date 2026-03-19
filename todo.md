@@ -39,3 +39,5 @@
 - [x] Corrigir erro de query de métricas quando credenciais não estão configuradas
 - [x] Adicionar tela de configuração inicial com validação de credenciais
 - [x] Melhorar tratamento de erros com feedback visual ao usuário
+- [x] Corrigir erro de mutation em Settings (falta de import Zod)
+- [x] Adicionar logs de erro para debug

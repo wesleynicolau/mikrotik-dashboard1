@@ -33,11 +33,13 @@ export default function Settings() {
       toast.success('Conexão estabelecida com sucesso!');
     },
     onError: (error) => {
+      const errorMessage = error.message || 'Falha desconhecida na conexão';
       setTestResult({
         success: false,
-        message: error.message,
+        message: errorMessage,
       });
-      toast.error('Falha na conexão');
+      toast.error(`Falha na conexão: ${errorMessage}`);
+      console.error('Connection error:', error);
     },
   });
 
