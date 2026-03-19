@@ -44,3 +44,5 @@
 - [x] Corrigir erro de polling em background quando navega para Settings
 - [x] Adicionar cleanup de queries quando componente desmonta
 - [x] Cancelar polling quando autoRefresh é desativado
+- [x] Melhorar mensagens de erro com classificação de tipo de falha
+- [x] Adicionar detecção de timeout, autenticação, firewall e outros erros

@@ -36,6 +36,52 @@ export interface RouterOSClient {
 }
 
 /**
+ * Classify connection errors to provide specific feedback
+ */
+function classifyConnectionError(error: unknown): string {
+  const errorStr = String(error);
+  const errorMsg = error instanceof Error ? error.message : errorStr;
+
+  // Timeout errors
+  if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('EHOSTUNREACH')) {
+    return 'TIMEOUT: Não foi possível conectar ao host. Verifique se o IP/hostname e porta estão corretos, e se o firewall não está bloqueando a conexão.';
+  }
+
+  // Connection refused (port closed)
+  if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('refused')) {
+    return 'CONEXÃO RECUSADA: A porta pode estar fechada ou o RouterOS não está escutando nela. Verifique a porta configurada (padrão: 8728 ou 8729).';
+  }
+
+  // Authentication errors
+  if (errorMsg.includes('authentication') || errorMsg.includes('invalid user') || errorMsg.includes('bad password')) {
+    return 'AUTENTICAÇÃO FALHOU: Usuário ou senha incorretos. Verifique as credenciais no RouterOS.';
+  }
+
+  // Host not found
+  if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('getaddrinfo') || errorMsg.includes('not found')) {
+    return 'HOST NÃO ENCONTRADO: O hostname/IP fornecido não pôde ser resolvido. Verifique o endereço do RouterOS.';
+  }
+
+  // Network unreachable
+  if (errorMsg.includes('ENETUNREACH') || errorMsg.includes('unreachable')) {
+    return 'REDE INACESSÍVEL: Não há rota para o host. Verifique a conectividade de rede.';
+  }
+
+  // Connection reset
+  if (errorMsg.includes('ECONNRESET') || errorMsg.includes('reset')) {
+    return 'CONEXÃO RESETADA: O RouterOS fechou a conexão. Pode ser um problema de firewall ou configuração do RouterOS.';
+  }
+
+  // Generic connection error
+  if (errorMsg.includes('connect')) {
+    return `ERRO DE CONEXÃO: ${errorMsg}`;
+  }
+
+  // Default
+  return `ERRO: ${errorMsg || 'Erro desconhecido na conexão'}`;
+}
+
+/**
  * Create a RouterOS client instance
  * Handles connection and data retrieval from RouterOS devices
  */
@@ -54,11 +100,12 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
 
       await api.connect();
       isConnectedFlag = true;
-      console.log('[RouterOS] Connected successfully');
+      console.log('[RouterOS] Connected successfully to', config.host);
     } catch (error) {
       isConnectedFlag = false;
-      console.error('[RouterOS] Connection failed:', error);
-      throw error;
+      const classifiedError = classifyConnectionError(error);
+      console.error('[RouterOS] Connection failed:', classifiedError);
+      throw new Error(classifiedError);
     }
   };
 
@@ -85,7 +132,7 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
       const resourceData = await api.write('/system/resource/print');
       
       if (!resourceData || resourceData.length === 0) {
-        throw new Error('No resource data returned');
+        throw new Error('No resource data returned from RouterOS');
       }
 
       const resource = resourceData[0];
@@ -98,22 +145,26 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
       const identityData = await api.write('/system/identity/print');
       const identity = identityData?.[0]?.name || 'Unknown';
 
-      // Get package info for version
+      // Get RouterOS version
       const packageData = await api.write('/system/package/print');
-      const routerOSPkg = packageData?.find((pkg: any) => pkg.name === 'routeros');
-      const version = routerOSPkg?.version || 'Unknown';
+      const routerosPackage = packageData?.find((pkg: any) => pkg.name === 'routeros');
+      const version = routerosPackage?.version || 'Unknown';
+
+      // Get board name (model)
+      const boardData = await api.write('/system/routerboard/print');
+      const model = boardData?.[0]?.['model-name'] || boardData?.[0]?.['board-name'] || 'Unknown';
 
       return {
         cpuUsage,
-        memoryUsage: memoryTotal - memoryUsage, // Convert free to used
+        memoryUsage,
         memoryTotal,
         uptime,
-        model: identity,
+        model,
         version,
       };
     } catch (error) {
-      console.error('[RouterOS] Error getting system info:', error);
-      throw error;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to get system info: ${errorMsg}`);
     }
   };
 
@@ -123,30 +174,28 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
     }
 
     try {
-      const data = await api.write('/interface/print');
-
-      if (!data || data.length === 0) {
+      const interfaceData = await api.write('/interface/print');
+      
+      if (!interfaceData) {
         return [];
       }
 
-      const interfaces: InterfaceInfo[] = data.map((iface: any) => ({
+      return interfaceData.map((iface: any) => ({
         name: iface.name || 'unknown',
         rxBytes: iface['rx-byte'] || '0',
         txBytes: iface['tx-byte'] || '0',
         rxPackets: iface['rx-packet'] || '0',
         txPackets: iface['tx-packet'] || '0',
-        running: iface.running === 'true' || iface.running === true,
+        running: iface.running === true,
       }));
-
-      return interfaces;
     } catch (error) {
-      console.error('[RouterOS] Error getting interfaces:', error);
-      throw error;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to get interfaces: ${errorMsg}`);
     }
   };
 
   const isConnected = (): boolean => {
-    return isConnectedFlag;
+    return isConnectedFlag && api !== null;
   };
 
   return {
