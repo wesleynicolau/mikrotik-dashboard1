@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, InsertSystemMetric, systemMetrics, InsertInterfaceMetric, interfaceMetrics } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -87,6 +87,51 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getMikrotikDevicesByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get devices: database not available");
+    return [];
+  }
+
+  try {
+    // Placeholder for actual device queries
+    // Will be implemented when needed
+    return [];
+  } catch (error) {
+    console.error("[Database] Failed to get devices:", error);
+    return [];
+  }
+}
+
+export async function saveSystemMetric(metric: InsertSystemMetric) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save metric: database not available");
+    return;
+  }
+
+  try {
+    await db.insert(systemMetrics).values(metric);
+  } catch (error) {
+    console.error("[Database] Failed to save system metric:", error);
+  }
+}
+
+export async function saveInterfaceMetric(metric: InsertInterfaceMetric) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save metric: database not available");
+    return;
+  }
+
+  try {
+    await db.insert(interfaceMetrics).values(metric);
+  } catch (error) {
+    console.error("[Database] Failed to save interface metric:", error);
+  }
 }
 
 // TODO: add feature queries here as your schema grows.

@@ -25,4 +25,60 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * MikroTik device configuration table
+ * Stores connection details for RouterOS devices
+ */
+export const mikrotikDevices = mysqlTable("mikrotik_devices", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }).notNull(),
+  port: int("port").default(8728).notNull(),
+  username: varchar("username", { length: 255 }).notNull(),
+  password: text("password").notNull(),
+  isActive: int("isActive").default(1).notNull(),
+  lastConnected: timestamp("lastConnected"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MikrotikDevice = typeof mikrotikDevices.$inferSelect;
+export type InsertMikrotikDevice = typeof mikrotikDevices.$inferInsert;
+
+/**
+ * System metrics history table
+ * Stores historical data for CPU, memory, disk usage
+ */
+export const systemMetrics = mysqlTable("system_metrics", {
+  id: int("id").autoincrement().primaryKey(),
+  deviceId: int("deviceId").notNull(),
+  cpuUsage: int("cpuUsage").notNull(),
+  memoryUsage: int("memoryUsage").notNull(),
+  memoryTotal: int("memoryTotal").notNull(),
+  diskUsage: int("diskUsage"),
+  diskTotal: int("diskTotal"),
+  uptime: varchar("uptime", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SystemMetric = typeof systemMetrics.$inferSelect;
+export type InsertSystemMetric = typeof systemMetrics.$inferInsert;
+
+/**
+ * Interface traffic metrics table
+ * Stores historical data for network interface traffic
+ */
+export const interfaceMetrics = mysqlTable("interface_metrics", {
+  id: int("id").autoincrement().primaryKey(),
+  deviceId: int("deviceId").notNull(),
+  interfaceName: varchar("interfaceName", { length: 255 }).notNull(),
+  rxBytes: varchar("rxBytes", { length: 255 }).notNull(),
+  txBytes: varchar("txBytes", { length: 255 }).notNull(),
+  rxPackets: varchar("rxPackets", { length: 255 }).notNull(),
+  txPackets: varchar("txPackets", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InterfaceMetric = typeof interfaceMetrics.$inferSelect;
+export type InsertInterfaceMetric = typeof interfaceMetrics.$inferInsert;
