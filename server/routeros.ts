@@ -41,44 +41,91 @@ export interface RouterOSClient {
 function classifyConnectionError(error: unknown): string {
   const errorStr = String(error);
   const errorMsg = error instanceof Error ? error.message : errorStr;
+  const errorCode = (error as any)?.code || '';
+  const errorErrno = (error as any)?.errno || '';
+
+  console.error('[Error Classification] Raw error details:', {
+    message: errorMsg,
+    code: errorCode,
+    errno: errorErrno,
+    fullString: errorStr,
+  });
 
   // Timeout errors
-  if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('EHOSTUNREACH')) {
+  if (
+    errorMsg.toLowerCase().includes('timeout') ||
+    errorMsg.includes('ETIMEDOUT') ||
+    errorMsg.includes('EHOSTUNREACH') ||
+    errorCode === 'ETIMEDOUT' ||
+    errorCode === 'EHOSTUNREACH'
+  ) {
     return 'TIMEOUT: Não foi possível conectar ao host. Verifique se o IP/hostname e porta estão corretos, e se o firewall não está bloqueando a conexão.';
   }
 
   // Connection refused (port closed)
-  if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('refused')) {
+  if (
+    errorMsg.toLowerCase().includes('refused') ||
+    errorMsg.includes('ECONNREFUSED') ||
+    errorCode === 'ECONNREFUSED'
+  ) {
     return 'CONEXÃO RECUSADA: A porta pode estar fechada ou o RouterOS não está escutando nela. Verifique a porta configurada (padrão: 8728 ou 8729).';
   }
 
   // Authentication errors
-  if (errorMsg.includes('authentication') || errorMsg.includes('invalid user') || errorMsg.includes('bad password')) {
+  if (
+    errorMsg.toLowerCase().includes('authentication') ||
+    errorMsg.toLowerCase().includes('invalid user') ||
+    errorMsg.toLowerCase().includes('bad password') ||
+    errorMsg.toLowerCase().includes('unauthorized')
+  ) {
     return 'AUTENTICAÇÃO FALHOU: Usuário ou senha incorretos. Verifique as credenciais no RouterOS.';
   }
 
   // Host not found
-  if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('getaddrinfo') || errorMsg.includes('not found')) {
+  if (
+    errorMsg.includes('ENOTFOUND') ||
+    errorMsg.toLowerCase().includes('getaddrinfo') ||
+    errorMsg.toLowerCase().includes('not found') ||
+    errorMsg.toLowerCase().includes('eai_again') ||
+    errorCode === 'ENOTFOUND'
+  ) {
     return 'HOST NÃO ENCONTRADO: O hostname/IP fornecido não pôde ser resolvido. Verifique o endereço do RouterOS.';
   }
 
   // Network unreachable
-  if (errorMsg.includes('ENETUNREACH') || errorMsg.includes('unreachable')) {
+  if (
+    errorMsg.includes('ENETUNREACH') ||
+    errorMsg.toLowerCase().includes('unreachable') ||
+    errorCode === 'ENETUNREACH'
+  ) {
     return 'REDE INACESSÍVEL: Não há rota para o host. Verifique a conectividade de rede.';
   }
 
   // Connection reset
-  if (errorMsg.includes('ECONNRESET') || errorMsg.includes('reset')) {
+  if (
+    errorMsg.includes('ECONNRESET') ||
+    errorMsg.toLowerCase().includes('reset') ||
+    errorCode === 'ECONNRESET'
+  ) {
     return 'CONEXÃO RESETADA: O RouterOS fechou a conexão. Pode ser um problema de firewall ou configuração do RouterOS.';
   }
 
   // Generic connection error
-  if (errorMsg.includes('connect')) {
+  if (errorMsg.toLowerCase().includes('connect')) {
     return `ERRO DE CONEXÃO: ${errorMsg}`;
   }
 
-  // Default
-  return `ERRO: ${errorMsg || 'Erro desconhecido na conexão'}`;
+  // If we have a specific error message, return it
+  if (errorMsg && errorMsg.length > 0) {
+    return `ERRO: ${errorMsg}`;
+  }
+
+  // Default - include error code if available
+  if (errorCode) {
+    return `ERRO (${errorCode}): Erro desconhecido na conexão. Verifique os dados de conexão e tente novamente.`;
+  }
+
+  return 'ERRO: Erro desconhecido na conexão. Verifique os dados de conexão e tente novamente.';
 }
 
 /**
@@ -91,6 +138,7 @@ export function createRouterOSClient(config: RouterOSConfig): RouterOSClient {
 
   const connect = async (): Promise<void> => {
     try {
+      console.log('[RouterOS] Attempting to connect to', config.host, 'on port', config.port);
       api = new RouterOSAPI({
         host: config.host,
         port: config.port,
