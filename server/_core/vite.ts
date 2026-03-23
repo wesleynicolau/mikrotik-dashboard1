@@ -48,10 +48,13 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+  // In production, dist/index.js is at /app/dist/index.js
+  // So import.meta.dirname = /app/dist
+  // We need /app/dist/public
+  const distPath = path.resolve(import.meta.dirname, "public");
+  
+  console.log(`[Vite] Serving static files from: ${distPath}`);
+  
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -60,8 +63,15 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // For all other routes (except /api), serve index.html for React Router
+  app.use("*", (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    const indexPath = path.resolve(distPath, "index.html");
+    console.log(`[Vite] Serving index.html for route: ${req.path}`);
+    res.sendFile(indexPath);
   });
 }

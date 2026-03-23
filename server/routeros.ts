@@ -146,9 +146,13 @@ const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
 
 /**
  * Generate a unique key for a connection config
+ * Includes password hash to ensure different credentials create different pool entries
  */
 function getConnectionKey(config: RouterOSConfig): string {
-  return `${config.host}:${config.port}:${config.user}`;
+  // Use a simple hash of password to avoid storing plaintext
+  const crypto = require('crypto');
+  const passwordHash = crypto.createHash('sha256').update(config.password).digest('hex').substring(0, 8);
+  return `${config.host}:${config.port}:${config.user}:${passwordHash}`;
 }
 
 /**

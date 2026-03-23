@@ -3,27 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Gauge, Wifi, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
+import { getLoginUrl } from "@/const";
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Redirect to login if not authenticated
+  const isAuthenticated = document.cookie.includes("auth=true");
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">MikroTik Dashboard</h1>
-            <p className="text-slate-300">Monitore seus roteadores RouterOS em tempo real</p>
-          </div>
-          <a href={`/api/oauth/login`}>
-            <Button className="w-full" size="lg">
-              Fazer Login
-            </Button>
-          </a>
-        </div>
-      </div>
-    );
+    setLocation("/login");
+    return null;
   }
 
   return (
@@ -31,7 +20,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Bem-vindo, {user?.name || 'Usuário'}!
+            Bem-vindo ao MikroTik Dashboard!
           </h1>
           <p className="text-slate-600">
             Monitore seus roteadores MikroTik RouterOS com métricas em tempo real
