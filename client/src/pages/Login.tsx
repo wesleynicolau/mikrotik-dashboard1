@@ -13,8 +13,11 @@ export default function Login() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simple login: admin / admin
-    if (username === "admin" && password === "admin") {
+    // Get stored password (default: admin)
+    const storedPassword = localStorage.getItem('dashboardPassword') || 'admin';
+    
+    // Simple login: admin / stored_password
+    if (username === "admin" && password === storedPassword) {
       // Set auth cookie
       document.cookie = "auth=true; path=/; max-age=86400";
       setLocation("/dashboard");

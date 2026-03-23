@@ -41,6 +41,12 @@ async function startServer() {
     res.sendFile(loginPath);
   });
   
+  // Serve change-password.html at /change-password
+  app.get('/change-password', (req, res) => {
+    const changePasswordPath = path.resolve(import.meta.dirname, '../../client/public/change-password.html');
+    res.sendFile(changePasswordPath);
+  });
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
